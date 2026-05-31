@@ -1,1 +1,5 @@
-# Wordpress-for-kubernetes
+# Wordpress-for-kubernetes but minikube
+
+## kullandigim uygulamalarin versionlar
+
+

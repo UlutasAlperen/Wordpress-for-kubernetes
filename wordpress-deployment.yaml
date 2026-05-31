@@ -39,8 +39,8 @@ spec:
                   key: DB_HOST
             - name: WORDPRESS_DB_PASSWORD
               valueFrom:
-                configMapKeyRef:
-                  name: wordpress-configmap
+                secretKeyRef:
+                  name: wordpress-secrets
                   key: DB_PASSWORD
             - name: WORDPRESS_DB_USER
               valueFrom:
