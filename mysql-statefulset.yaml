@@ -16,6 +16,31 @@ spec:
       containers:
         - name: mysql-database
           image: mysql:8.0
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 250m
+              memory: 1Gi
+          env:
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-database-configmap
+                  key: MYSQL_DATABASE
+            - name: MYSQL_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-database-configmap
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wordpress-secrets
+                  key: DB_PASSWORD
+            - name: MYSQL_RANDOM_ROOT_PASSWORD
+              value: "1" # burada root erisimi olmayacak olacaksa kaldirilabilir
           ports:
             - containerPort: 3306
               name: mysql-database
@@ -24,9 +49,9 @@ spec:
               mountPath: /var/lib/mysql
   volumeClaimTemplates:
     - metadata:
-        name: mysql-database-pvc
+        name: mysql-database-persistent-storage
       spec:
-        storageClassName: my-storage-class
+        storageClassName: standard
         accessModes:
           - ReadWriteOnce
         resources:

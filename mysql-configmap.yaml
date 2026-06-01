@@ -5,6 +5,6 @@ kind: ConfigMap
 metadata:
   name: mysql-database-configmap
 data:
-  MYSQL_DATABASE: wordpress
-  MYSQL_USER: wordpress
+  MYSQL_DATABASE: exampledb
+  MYSQL_USER: exampleuser
 ---

@@ -4,7 +4,7 @@ kind: ConfigMap
 metadata:
   name: wordpress-configmap
 data:
-  DB_HOST: db
+  DB_HOST: mysql-service # mysql headless service eslesmeli
   DB_NAME: exampledb
   DB_USER: exampleuser
 ---

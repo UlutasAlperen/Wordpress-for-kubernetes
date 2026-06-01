@@ -8,5 +8,5 @@ spec:
     app: wordpress-deployment
   ports:
     - port: 80
-      targetPort: 6001
+      targetPort: 80
 ---
