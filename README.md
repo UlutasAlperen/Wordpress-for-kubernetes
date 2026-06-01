@@ -44,7 +44,7 @@ kubectl apply -f wordpress-httproute.yaml
 
 - **Volume permission sorunu** — WordPress container www-data (uid 33) kullanıcısıyla çalışıyor ama PVC root'a ait mount ediliyor. Bu yüzden init container ile `chown -R 33:33` yapıp yetkiyi düzeltmem gerekti. Başlangıçta pod CrashLoopBackOff'a düşüyordu, logları inceledikten sonra sorunun yetki olduğunu anladım.
 
-- **StatefulSet vs Deployment kararı** — İlk başta MySQL için de Deployment kullanmayı düşünüyordum. Araştırınca anladım ki StatefulSet'in sağladığı stable network identity ve有序 (ordered) scaling kavramları stateful uygulamalar için kritik. Hele replica sayısı 1'den fazla olursa StatefulSet şart.
+- **StatefulSet vs Deployment kararı** — İlk başta MySQL için de Deployment kullanmayı düşünüyordum. Araştırınca anladım ki StatefulSet'in sağladığı stable network identity ve (ordered) scaling kavramları stateful uygulamalar için kritik. Hele replica sayısı 1'den fazla olursa StatefulSet şart.
 
 - **Ingress yerine Gateway API** — Başlangıçta Ingress ile gidecektim ama Gateway API'nin sunduğu structural separation (cluster admin ve app geliştirici rollerinin ayrılması) daha büyük projelerde hayat kurtarıyor. Öğrenme eğrisi biraz dik ama yatırım yapmaya değer.
 
