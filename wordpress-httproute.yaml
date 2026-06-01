@@ -7,7 +7,7 @@ spec:
   parentRefs:
     - name: wordpress-gateway
   hostnames:
-    - "deneme.com"
+    - "www.deneme.com"
   rules:
     - matches:
         - path:

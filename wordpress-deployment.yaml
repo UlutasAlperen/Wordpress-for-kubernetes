@@ -21,6 +21,8 @@ spec:
       labels:
         app: wordpress-deployment
     spec:
+      securityContext:
+        supplementalGroups: [33]
       initContainers:
         - name: volume-permissions
           image: busybox # www-data kullanicisina yetki vermek icin
@@ -72,10 +74,9 @@ spec:
               mountPath: /var/www/html
         - name: nginx
           image: nginx:latest
-          securityContext: # Nginx container'ına securityContext ekleyerek onu da www-data grubuna dahil ettim
+          securityContext:
             runAsUser: 101
             runAsGroup: 33
-            supplementalGroups: [33]
           ports:
             - containerPort: 80
           volumeMounts:
