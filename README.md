@@ -108,16 +108,20 @@ Tüm pod'lar `Running` ve `READY 1/1` (veya MySQL için `1/1`) olana kadar bekle
 
 ### 5. Minikube Tunnel'ı Başlat
 
-LoadBalancer Service'lerine external IP atanması için ayrı bir terminalde çalıştır:
+LoadBalancer Service'lerine external IP atanması için ayrı bir terminalde çalıştır test edebilmek icin:
 
 ```bash
 minikube tunnel --bind-address="127.0.0.1" -c
 ```
+/etc/hosts duzenle domainden gelecek olan istekleri 127.0.0.1 yonlendirsin
+        
+```
+127.0.0.1 deneme.com
+```
 
 ### 6. Tarayıcıdan Eriş
 
-```bash
-kubectl get httproute
+```bash kubectl get httproute
 ```
 
 HTTPRouteStatus bölümündeki adresi alıp tarayıcıda aç. Alternatif olarak port-forward kullanabilirsin:
@@ -126,7 +130,7 @@ HTTPRouteStatus bölümündeki adresi alıp tarayıcıda aç. Alternatif olarak 
 kubectl port-forward svc/wordpress-service 8080:80
 ```
 
-Tarayıcıda `http://localhost:8080` adresine git.
+Tarayıcıda test etmek icin `http://localhost:8080` adresine git.
 
 ## Temizlik
 
@@ -160,25 +164,3 @@ minikube stop
 # veya tamamen silmek için
 minikube delete
 ```
-
-## Sorun Giderme
-
-| Sorun | Çözüm |
-|---|---|
-| Pod `CrashLoopBackOff`'ta | `kubectl logs <pod> -c <container>` ve `kubectl describe pod <pod>` ile logları incele |
-| Volume permission hatası | Init container `chown -R 33:33` yapısı zaten mevcut; PVC'nin bound olduğundan emin ol: `kubectl get pvc` |
-| PVC `Pending` kalıyor | `minikube addons enable storage-provisioner` çalıştırıp tekrar dene |
-| Gateway external IP boş | `minikube tunnel` çalıştırıldığından ve ayrı terminalde açık olduğundan emin ol |
-| Envoy Gateway pod pending | `kubectl get pods -n envoy-gateway-system` ile durumu kontrol et |
-
-## Karşılaştığım Zorluklar ve Öğrendiklerim
-
-- **Volume permission sorunu** — WordPress container www-data (uid 33) kullanıcısıyla çalışıyor ama PVC root'a ait mount ediliyor. Bu yüzden init container ile `chown -R 33:33` yapıp yetkiyi düzeltmem gerekti. Başlangıçta pod CrashLoopBackOff'a düşüyordu, logları inceledikten sonra sorunun yetki olduğunu anladım.
-
-- **StatefulSet vs Deployment kararı** — Detaylı karşılaştırma ve gerekçe için [Tasarım Kararları](#mysql-statefulset-yerine-deployment) bölümüne bak.
-
-- **Ingress yerine Gateway API** — Başlangıçta Ingress ile gidecektim ama Gateway API'nin sunduğu structural separation (cluster admin ve app geliştirici rollerinin ayrılması) daha büyük projelerde hayat kurtarıyor. Öğrenme eğrisi biraz dik ama yatırım yapmaya değer.
-
-- **Nginx sidecar yerine Apache** — Detaylı karşılaştırma ve gerekçe için [Tasarım Kararları](#nginx-sidecar-yerine-apache-image) bölümüne bak.
-
-
