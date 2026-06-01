@@ -1,0 +1,10 @@
+---
+# https://kubernetes.io/docs/concepts/configuration/configmap/
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-database-configmap
+data:
+  MYSQL_DATABASE: wordpress
+  MYSQL_USER: wordpress
+---

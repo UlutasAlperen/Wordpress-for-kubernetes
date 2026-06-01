@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: wordpress
-          image: wordpress:latest
+          image: wordpress:php8.5-fpm
           resources:
             requests:
               cpu: 50m
@@ -37,6 +37,11 @@ spec:
                 configMapKeyRef:
                   name: wordpress-configmap
                   key: DB_HOST
+            - name: WORDPRESS_DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: wordpress-configmap
+                  key: DB_NAME
             - name: WORDPRESS_DB_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -48,7 +53,7 @@ spec:
                   name: wordpress-configmap
                   key: DB_USER
           ports:
-            - containerPort: 80
+            - containerPort: 6001
               name: wordpress-deployment
           volumeMounts:
             - name: wordpress-persistent-storage

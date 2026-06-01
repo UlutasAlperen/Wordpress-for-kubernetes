@@ -2,39 +2,34 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: myapp
-  namespace: default
+  name: mysql-database
 spec:
   selector:
     matchLabels:
-      app: myapp # has to match .spec.template.metadata.labels
-  serviceName: "myapp"
-  replicas: 3 # by default is 1
+      app: mysql-database
+  replicas: 1
   template:
     metadata:
-      annotations:
-        kubectl.kubernetes.io/default-container: myapp
       labels:
-        app: myapp # has to match .spec.selector.matchLabels
+        app: mysql-database
     spec:
-      terminationGracePeriodSeconds: 10
       containers:
-        - name: myapp
-          image: myapp-slim:1.16.1
+        - name: mysql-database
+          image: mysql:8.0
           ports:
-            - containerPort: 80
-              name: myapp
+            - containerPort: 3306
+              name: mysql-database
           volumeMounts:
-            - name: www
-              mountPath: /usr/share/nginx/html
+            - name: mysql-database-persistent-storage
+              mountPath: /var/lib/mysql
   volumeClaimTemplates:
     - metadata:
-        name: www
+        name: mysql-database-pvc
       spec:
         storageClassName: my-storage-class
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 1Gi
+            storage: 5Gi
 ---
