@@ -74,9 +74,6 @@ spec:
               mountPath: /var/www/html
         - name: nginx
           image: nginx:latest
-          securityContext:
-            runAsUser: 101
-            runAsGroup: 33
           ports:
             - containerPort: 80
           volumeMounts:
