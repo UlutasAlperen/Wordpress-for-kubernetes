@@ -12,7 +12,7 @@ Minikube üzerinde WordPress çalıştırmak için yazdığım Kubernetes manife
 
 ## Tasarım Kararları
 
-### Nginx Sidecar yerine Apache Image
+### Nginx Sidecar yerine Apache Image (caddy'de icinde yapacagim)
 
 WordPress'in resmi `wordpress:latest` image'ı Apache ile geliyor ve tek bir container'da hem PHP hem web server çalıştırıyor. Ben bunun yerine `wordpress:php8.5-fpm` image'ını Nginx sidecar ile kullandım.
 
