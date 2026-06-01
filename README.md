@@ -23,7 +23,7 @@ WordPress'in resmi `wordpress:latest` image'ı Apache ile geliyor ve tek bir con
 - **Kaynak izolasyonu** — PHP-FPM ve Nginx ayrı process'ler olduğu için bellek ve CPU sınırlarını container bazında ayrı ayrı set edebiliyorum. `resources` alanında `wordpress` ve `nginx` container'larına farklı limitler verebiliyorum.
 - **Sidecar avantajı** — Aynı pod içinde oldukları için ağ latency'si sıfır (localhost:9000), lifecycle aynı, volume paylaşımı doğal. Ayrı pod'larda olsaydı Service üzerinden git-gel maliyeti olurdu.
 
-### MySQL StatefulSet yerine Deployment
+### MySQL Deployment yerine StatefulSet
 
 İlk başta MySQL için de Deployment kullanmayı düşünüyordum, ancak araştırınca StatefulSet'in stateful uygulamalar için kritik olduğunu anladım.
 
