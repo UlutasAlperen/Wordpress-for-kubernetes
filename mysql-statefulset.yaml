@@ -40,7 +40,7 @@ spec:
                   name: wordpress-secrets
                   key: DB_PASSWORD
             - name: MYSQL_RANDOM_ROOT_PASSWORD
-              value: "1" # burada root erisimi olmayacak olacaksa kaldirilabilir
+              value: "1" #burada root erisimi olacaksa kaldirilabilir cunku parola rastgele olusturuluyor sonradan giris imkansiz olur
           ports:
             - containerPort: 3306
               name: mysql-database
