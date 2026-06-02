@@ -12,7 +12,7 @@ Minikube üzerinde WordPress çalıştırmak için yazdığım Kubernetes manife
 
 ## Tasarım Kararları
 
-### Wordpress-Apache Image  yerine  Nginx Sidecar(caddy'de icinde yapacagim)
+### Wordpress-Apache Image  yerine  Nginx Sidecar (caddy icin olan versiyonda gelecek)
 
 WordPress'in resmi `wordpress:latest` image'ı Apache ile geliyor ve tek bir container'da hem PHP hem web server çalıştırıyor. Ben bunun yerine `wordpress:php8.5-fpm` image'ını Nginx sidecar ile kullandım.
 
@@ -121,7 +121,8 @@ minikube tunnel --bind-address="127.0.0.1" -c
 
 ### 6. Tarayıcıdan Eriş
 
-```bash kubectl get httproute
+```bash
+kubectl get httproute
 ```
 
 HTTPRouteStatus bölümündeki adresi alıp tarayıcıda aç. Alternatif olarak port-forward kullanabilirsin:
