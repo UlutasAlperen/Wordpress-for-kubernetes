@@ -165,3 +165,10 @@ minikube stop
 # veya tamamen silmek için
 minikube delete
 ```
+## Minikube harici multi-node cluster icin yapilacaklar veya yapilabilecekler
+
+1. **StorageClass'i RWX destekli hale getirilmesi zorunlu yoksa calismaz** (en kritik — olmadan multi-node calismaz)
+2. **WordPress media icin object storage ekle** (multi-pod tutarlilik)
+3. **Pod anti-affinity ekle** (HA)
+4. **MySQL replication** (SPOF giderme)
+5. **HPA + PDB** (olcekleme ve guvenlik)
