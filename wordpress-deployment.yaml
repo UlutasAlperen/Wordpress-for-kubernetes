@@ -25,13 +25,13 @@ spec:
         supplementalGroups: [33]
       initContainers:
         - name: volume-permissions
-          image: busybox # www-data kullanicisina yetki vermek icin
+          image: busybox #www-data kullanicisina yetki vermek icin
           command:
             [
               "sh",
               "-c",
               "chown -R 33:33 /var/www/html && chmod -R 775 /var/www/html",
-            ]
+            ] #33 burada www-kullanicisini temsil ediyor direk root:www-data ,770 da yapilabilir other yetkilendirmeye gerek yok 
           volumeMounts:
             - name: wordpress-persistent-storage
               mountPath: /var/www/html
@@ -73,7 +73,7 @@ spec:
             - name: wordpress-persistent-storage
               mountPath: /var/www/html
         - name: nginx
-          image: nginx:latest
+          image: nginx:latest #daha stable olmasi icin version tanimlanabilir ben boyle tercih ettim
           ports:
             - containerPort: 80
           volumeMounts:
