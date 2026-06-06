@@ -22,13 +22,10 @@ WordPress'in resmi image'ı Apache ile geliyor, tek container'da hem PHP hem web
 **Neden?**
 
 - **Performans** — Nginx static dosya serve etmede Apache'den hızlı. PHP olmayan istekler doğrudan Nginx'ten karşılanıyor, PHP process'lerini meşgul etmiyor.
-- **Esnek konfigürasyon** — FastCGI caching, rate limiting, rewrite kuralları Nginx'te daha rahat yazılıyor. Apache `.htaccess` her istekte yeniden okunuyor, Nginx bir kere compile ediyor.
 - **Kaynak izolasyonu** — PHP-FPM ve Nginx ayrı process'ler, bellek ve CPU limitlerini container bazında ayrı set edebiliyorum.
 - **Sidecar avantajı** — Aynı pod içinde oldukları için unix socket ile haberleşiyorlar (ağ latency'si sıfır), lifecycle aynı, volume paylaşımı doğal.
 
 ### MySQL Deployment yerine StatefulSet
-
-İlk başta MySQL için de Deployment kullanmayı düşünüyordum ama StatefulSet'in stateful uygulamalar için kritik olduğunu gördüm.
 
 **Neden?**
 
