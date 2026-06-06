@@ -1,38 +1,41 @@
 # WordPress on Minikube
 
-Minikube üzerinde WordPress çalıştırmak için yazdığım Kubernetes manifestleri. Amaç sadece "çalışsın" değil, production benzeri kararlarla mimariyi kurmak. Her kararı bir sebebiyle aldım, aşağıda açıklıyorum.
+Minikube üzerinde WordPress çalıştırmak için yazdığım Kubernetes manifestleri. Production benzeri kararlarla kurdum, her kararın bir sebebi var.
 
 ## Mimari
 
-- **MySQL StatefulSet + Headless Service** — Veritabanı stateful bir uygulama, Deployment değil StatefulSet kullanmamın sebebi bu. Her pod yeniden başladığında aynı identity ve volume ile gelmeli. Headless Service ise DNS üzerinden doğrudan pod adreslemesi yapıyor, bu da replica eklemek istediğimde hayati önem taşıyor.
-- **WordPress (php-fpm) + Nginx sidecar** — Aynı pod içinde iki container çalışıyor. Nginx static dosyaları serve ediyor, PHP isteklerini FastCGI üzerinden localhost:9000'den WordPress container'ına yönlendiriyor. Ayrı pod'lar yerine sidecar tercih etmemin sebebi: ağ latency'si sıfır, lifecycle aynı, volume paylaşımı kolay.
-- **Gateway API (Envoy Gateway)** — Klasik Ingress yerine Gateway API kullandım. Daha expressive, role-based (cluster admin gateway oluşturuyor, app dev sadece route yazıyor) ve ilerisi için daha sağlıklı bir yönetim modeli sunuyor.
-- **PersistentVolumeClaim** — WordPress dosyaları pod restart'ta silinmemeli. 5Gi PVC ile `/var/www/html` path'ini kalıcı hale getirdim.
-- **ConfigMap / Secret ayrımı** — Şifreler Secret'ta, konfigürasyon değerleri ConfigMap'de. DB_PASSWORD base64 encoded halde tutuluyor. Bu ayrım güvenlik açısından önemsenecek bir detay.
+- **MySQL StatefulSet + Headless Service** — Veritabanı stateful bir şey, Deployment kullanmak mantıklı değil. StatefulSet ile pod'lar stable identity'ye sahip oluyor, replay'e uygun sıralı başlatma var. Headless Service de DNS üzerinden doğrudan pod adreslemesi yapıyor.
+- **WordPress (php-fpm) + Nginx sidecar** — Aynı pod içinde iki container. Nginx static dosyaları serve ediyor, PHP isteklerini FastCGI üzerinden unix socket'ten WordPress container'ına yolluyor. Ayrı pod arasında network hop olmuyor, volume paylaşımı da kolay.
+- **PHP-FPM Unix Socket** — `wordpress-php-conf-configmap` ile PHP-FPM'i TCP yerine unix socket'e (`/var/run/php-fpm/wordpress.sock`) dinlemeye ayarladım. Socket dosyasını `emptyDir` volume'ü ile iki container arasında paylaştırıyorum. TCP localhost:9000 yerine unix socket same-pod iletişiminde daha hızlı.
+- **Gateway API (Envoy Gateway)** — İngress yerine Gateway API kullandım. Daha expressive, role-based bir model sunuyor. Cluster admin Gateway oluşturuyor, uygulama geliştiricisi sadece route yazıyor.
+- **PersistentVolumeClaim** — WordPress dosyaları pod restart'ta kaybolmamalı. 5Gi PVC ile `/var/www/html` path'ini kalıcı hale getirdim. MySQL için de StatefulSet'in `volumeClaimTemplates` özelliğini kullandım, pod silinse bile data duruyor.
+- **ConfigMap / Secret ayrımı** — Şifreler Secret'ta, konfigürasyon değerleri ConfigMap'de. DB_PASSWORD base64 encoded halde tutuluyor tabi base64 encryption değil ama en azından manifest'te plain text durmuyor.
+- **Init Container** — WordPress PV'sine `www-data` (uid 33) kullanıcısı yazabilsin diye `securityContext: supplementalGroups: [33]` ve init container ile `chown -R 33:33 /var/www/html` yapıyorum. Parcel mount sonrası root'a ait oluyor dizin, WordPress bunu yazamıyor yoksa.
+- **RollingUpdate** — WordPress Deployment'ta `maxSurge: 25%` ve `maxUnavailable: 25%` set ettim. Yeni bir sürüm çıkınca hepsini birden düşürmüyor.
 
 ## Tasarım Kararları
 
-### Wordpress-Apache Image  yerine  Nginx Sidecar (caddy icin olan versiyonda gelecek)
+### WordPress-Apache Image yerine Nginx Sidecar (Caddy versiyonu da gelecek)
 
-WordPress'in resmi `wordpress:latest` image'ı Apache ile geliyor ve tek bir container'da hem PHP hem web server çalıştırıyor. Ben bunun yerine `wordpress:php8.5-fpm` image'ını Nginx sidecar ile kullandım.
+WordPress'in resmi image'ı Apache ile geliyor, tek container'da hem PHP hem web server çalışıyor. Ben `wordpress:php8.5-fpm` image'ını Nginx sidecar ile kullandım.
 
 **Neden?**
 
-- **Performans** — Nginx static dosya serve etme konusunda Apache'den belirgin şekilde hızlı. PHP olmayan istekler (CSS, JS, görseller) doğrudan Nginx'ten karşılanıyor, PHP process'lerini meşgul etmiyor.
-- **Esnek konfigürasyon** — FastCGI caching, rate limiting, custom rewrite kuralları gelişmiş ayarlar Nginx'te çok daha expressive yazılabiliyor. Apache `.htaccess` dosyaları her istekte yeniden okunuyor, Nginx ise bir kere compile ediyor.
-- **Kaynak izolasyonu** — PHP-FPM ve Nginx ayrı process'ler olduğu için bellek ve CPU sınırlarını container bazında ayrı ayrı set edebiliyorum. `resources` alanında `wordpress` ve `nginx` container'larına farklı limitler verebiliyorum.
-- **Sidecar avantajı** — Aynı pod içinde oldukları için ağ latency'si sıfır (localhost:9000), lifecycle aynı, volume paylaşımı doğal. Ayrı pod'larda olsaydı Service üzerinden git-gel maliyeti olurdu.
+- **Performans** — Nginx static dosya serve etmede Apache'den hızlı. PHP olmayan istekler doğrudan Nginx'ten karşılanıyor, PHP process'lerini meşgul etmiyor.
+- **Esnek konfigürasyon** — FastCGI caching, rate limiting, rewrite kuralları Nginx'te daha rahat yazılıyor. Apache `.htaccess` her istekte yeniden okunuyor, Nginx bir kere compile ediyor.
+- **Kaynak izolasyonu** — PHP-FPM ve Nginx ayrı process'ler, bellek ve CPU limitlerini container bazında ayrı set edebiliyorum.
+- **Sidecar avantajı** — Aynı pod içinde oldukları için unix socket ile haberleşiyorlar (ağ latency'si sıfır), lifecycle aynı, volume paylaşımı doğal.
 
 ### MySQL Deployment yerine StatefulSet
 
-İlk başta MySQL için de Deployment kullanmayı düşünüyordum, ancak araştırınca StatefulSet'in stateful uygulamalar için kritik olduğunu anladım.
+İlk başta MySQL için de Deployment kullanmayı düşünüyordum ama StatefulSet'in stateful uygulamalar için kritik olduğunu gördüm.
 
 **Neden?**
 
-- **Stable network identity** — StatefulSet pod'ları sıralı isimlendirme alıyor (`mysql-database-0`, `mysql-database-1`). Headless Service ile DNS üzerinden `mysql-database-0.mysql-database` şeklinde doğrudan adreslenebiliyorlar. Deployment'ta pod isimleri her restart'ta değişiyor.
-- **Persistent volume guarantee** — `volumeClaimTemplates` ile her replica için ayrı bir PVC otomatik oluşturuluyor. Pod silindiğinde bile volume korunuyor. Deployment'ta pod restart'ta farklı bir node'a schedule edilirse veri kaybı riski var.
-- **Ordered scaling** — Replica sayısını artırırken sıralı başlatma ve kapatma garanti ediliyor. MySQL replication kurarken bu kritik — önce primary, sonra replica başlamalı.
-- **İleride replica ekleme** — Şu an `replicas: 1` ama StatefulSet kullanarak ileride replica eklemek çok daha güvenli. Deployment ile replica artırınca her pod aynı volume'ı paylaşmak zorunda kalırdı.
+- **Stable network identity** — StatefulSet pod'ları sıralı isimlendirme alıyor (`mysql-database-0`, `mysql-database-1`). Headless Service ile `'mysql-database-0.mysql-service` şeklinde doğrudan adreslenebiliyorlar. Deployment'ta pod isimleri her restart'ta değişiyor.
+- **Persistent volume guarantee** — `volumeClaimTemplates` ile her replica için ayrı PVC otomatik oluşturuluyor. Pod silindiğinde bile volume korunuyor. Deployment'ta farklı node'a schedule edilirse veri kaybı riski var.
+- **Ordered scaling** — Replica sayısını artırırken sıralı başlatma ve kapatma garanti ediliyor. MySQL replication kurarken önce primary, sonra replica başlamalı.
+- **İleride replica ekleme** — Şu an `replicas: 1` ama StatefulSet ile replica eklemek güvenli. Deployment ile replica artırınca her pod aynı volume'ı paylaşmak zorunda kalırdı.
 
 ## Gereksinimler
 
@@ -84,6 +87,7 @@ kubectl apply -f wordpress-secrets.yaml
 kubectl apply -f mysql-headless-service.yaml
 kubectl apply -f mysql-statefulset.yaml
 kubectl apply -f wordpress-deployment-configmap.yaml
+kubectl apply -f wordpress-php-conf-configmap.yaml
 kubectl apply -f nginx-configmap.yaml
 kubectl apply -f wordpress-pvc.yaml
 kubectl apply -f wordpress-deployment.yaml
@@ -92,7 +96,8 @@ kubectl apply -f gateway-class.yaml
 kubectl apply -f gateway.yaml
 kubectl apply -f wordpress-httproute.yaml
 ```
-yada
+
+ya da
 
 ```bash
 kubectl apply -f .
@@ -104,17 +109,18 @@ kubectl apply -f .
 kubectl get pods -w
 ```
 
-Tüm pod'lar `Running` ve `READY 1/1` (veya MySQL için `1/1`) olana kadar bekle.
+Tüm pod'lar `Running` ve `READY 1/1` olana kadar bekle.
 
 ### 5. Minikube Tunnel'ı Başlat
 
-LoadBalancer Service'lerine external IP atanması için ayrı bir terminalde çalıştır test edebilmek icin:
+LoadBalancer Service'lerine external IP atanması için ayrı bir terminalde çalıştır:
 
 ```bash
 minikube tunnel --bind-address="127.0.0.1" -c
 ```
-/etc/hosts duzenle domainden gelecek olan istekleri 127.0.0.1 yonlendirsin
-        
+
+`/etc/hosts` dosyasına ekle:
+
 ```
 127.0.0.1 deneme.com
 ```
@@ -125,31 +131,20 @@ minikube tunnel --bind-address="127.0.0.1" -c
 kubectl get httproute
 ```
 
-HTTPRouteStatus bölümündeki adresi alıp tarayıcıda aç. Alternatif olarak port-forward kullanabilirsin:
+HTTPRouteStatus'teki adresi tarayıcıda aç. Alternatif olarak port-forward:
 
 ```bash
 kubectl port-forward svc/wordpress-service 8080:80
 ```
 
-Tarayıcıda test etmek icin `http://localhost:8080` adresine git.
+Tarayıcıda `http://localhost:8080` adresine git.
 
 ## Temizlik
 
-Kaynakları temizlemek için manifestleri ters sırada sil:
+Kaynakları temizlemek için:
 
 ```bash
-kubectl delete -f wordpress-httproute.yaml
-kubectl delete -f gateway.yaml
-kubectl delete -f gateway-class.yaml
-kubectl delete -f wordpress-service.yaml
-kubectl delete -f wordpress-deployment.yaml
-kubectl delete -f wordpress-pvc.yaml
-kubectl delete -f nginx-configmap.yaml
-kubectl delete -f wordpress-deployment-configmap.yaml
-kubectl delete -f mysql-statefulset.yaml
-kubectl delete -f mysql-headless-service.yaml
-kubectl delete -f wordpress-secrets.yaml
-kubectl delete -f mysql-configmap.yaml
+kubectl delete -f .
 ```
 
 Envoy Gateway'i kaldırmak için:
@@ -165,10 +160,11 @@ minikube stop
 # veya tamamen silmek için
 minikube delete
 ```
-## Minikube harici multi-node cluster icin yapilacaklar veya yapilabilecekler
 
-1. **StorageClass'i RWX destekli hale getirilmesi zorunlu yoksa calismaz** (en kritik — olmadan multi-node calismaz)
-2. **WordPress media icin object storage ekle** (multi-pod tutarlilik)
-3. **Pod anti-affinity ekle** (HA)
-4. **MySQL replication** (SPOF giderme)
-5. **HPA + PDB** (olcekleme ve guvenlik)
+## Minikube Harici Multi-Node Cluster İçin Yapılması Gerekenler
+
+1. **StorageClass RWX destekli olmalı** — yoksa multi-node çalışmaz
+2. **WordPress media için object storage ekle** — multi-pod tutarlılık için
+3. **Pod anti-affinity ekle** — HA için
+4. **MySQL replication** — SPOF giderme
+5. **HPA + PDB** — ölçekleme ve güvenlik için

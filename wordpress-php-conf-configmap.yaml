@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wordpress-php-conf-configmap
+data:
+  zz-socket.conf: |
+    [www]
+    listen = /var/run/php-fpm/wordpress.sock
+    listen.owner = www-data
+    listen.group = www-data
+    listen.mode = 0666
+---

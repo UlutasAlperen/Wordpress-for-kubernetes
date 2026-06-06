@@ -26,15 +26,16 @@ spec:
       initContainers:
         - name: volume-permissions
           image: busybox #www-data kullanicisina yetki vermek icin
-          command:
-            [
+          command: [
               "sh",
               "-c",
               "chown -R 33:33 /var/www/html && chmod -R 775 /var/www/html",
-            ] #33 burada www-kullanicisini temsil ediyor direk root:www-data ,770 da yapilabilir other yetkilendirmeye gerek yok 
+            ] #33 burada www-kullanicisini temsil ediyor direk root:www-data ,770 da yapilabilir other yetkilendirmeye gerek yok
           volumeMounts:
             - name: wordpress-persistent-storage
               mountPath: /var/www/html
+            - name: shared-socket
+              mountPath: /var/run/php-fpm
       containers:
         - name: wordpress
           image: wordpress:php8.5-fpm
@@ -68,9 +69,15 @@ spec:
                   key: DB_USER
           ports:
             - containerPort: 9000
+              name: fpm
           volumeMounts:
             - name: wordpress-persistent-storage
               mountPath: /var/www/html
+            - name: shared-socket
+              mountPath: /var/run/php-fpm
+            - name: php-socket-conf
+              mountPath: /usr/local/etc/php-fpm.d/zz-socket.conf
+              subPath: zz-socket.conf
         - name: nginx
           image: nginx:latest #daha stable olmasi icin version tanimlanabilir ben boyle tercih ettim
           ports:
@@ -81,6 +88,8 @@ spec:
             - name: nginx-config
               mountPath: /etc/nginx/conf.d/default.conf
               subPath: default.conf
+            - name: shared-socket
+              mountPath: /var/run/php-fpm
           resources:
             requests:
               cpu: 50m
@@ -95,4 +104,9 @@ spec:
         - name: nginx-config
           configMap:
             name: nginx-configmap
+        - name: php-socket-conf
+          configMap:
+            name: wordpress-php-conf-configmap
+        - name: shared-socket
+          emptyDir: {}
 ---
